@@ -28,10 +28,10 @@ public class PAg implements BranchPredictor {
         PABHR = null;
 
         // Initialize the PHT with a size of 2^size and each entry having a saturating counter of size "SCSize"
-        PHT = null;
+        PHT = new PageHistoryTable((int)Math.pow(2,BHRSize), SCSize);
 
         // Initialize the SC register
-        SC = null;
+        SC = new SIPORegister("SC", SCSize, null);
     }
 
     /**
