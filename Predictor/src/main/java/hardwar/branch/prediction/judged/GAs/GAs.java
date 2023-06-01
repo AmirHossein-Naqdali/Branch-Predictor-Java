@@ -20,7 +20,7 @@ public class GAs implements BranchPredictor {
     }
 
     /**
-     * Creates a new GAs predictor with the given BHR register size and initializes the PAPHT based on
+     * Creates a new GAs predictor with the given BHR register size and initializes the PSPHT based on
      * the Ksize and saturating counter size
      *
      * @param BHRSize               the size of the BHR register
@@ -36,9 +36,9 @@ public class GAs implements BranchPredictor {
         // Initialize the BHR register with the given size and no default value
         this.BHR = new SIPORegister("BHR", BHRSize,null) ;
 
-        // Initializing the PAPHT with BranchInstructionSize as PHT Selector and 2^BHRSize row as each PHT entries
+        // Initializing the PSPHT with BranchInstructionSize as PHT Selector and 2^BHRSize row as each PHT entries
         // number and SCSize as block size
-        PAPHT = new PerAddressPredictionHistoryTable(KSize, (int)Math.pow(2,BHRSize), SCSize);
+        PSPHT = new PerAddressPredictionHistoryTable(KSize, (int)Math.pow(2,BHRSize), SCSize);
 
         // Initialize the SC register
         SC = new SIPORegister("SC", SCSize, null);
@@ -58,8 +58,8 @@ public class GAs implements BranchPredictor {
         // TODO: complete Task 1
         Bit[] branchAddress = branchInstruction.getInstructionAddress();
         Bit[] bits = getCacheEntry(branchAddress);
-        PAPHT.putIfAbsent(bits, getDefaultBlock());
-        Bit[] SCbits = PAPHT.get(bits);
+        PSPHT.putIfAbsent(bits, getDefaultBlock());
+        Bit[] SCbits = PSPHT.get(bits);
         Bit msb = SCbits[0];
         if(msb==Bit.ZERO)
             return BranchResult.NOT_TAKEN;
@@ -78,13 +78,13 @@ public class GAs implements BranchPredictor {
     public void update(BranchInstruction branchInstruction, BranchResult actual) {
         Bit[]branchAddress = branchInstruction.getInstructionAddress();
         Bit[] bits = getCacheEntry(branchAddress);
-        Bit[] SCbits = PAPHT.get(bits);
+        Bit[] SCbits = PSPHT.get(bits);
         Bit[] result;
         if(actual == BranchResult.TAKEN)
             result = CombinationalLogic.count(SCbits, true,CountMode.SATURATING);
         else
             result = CombinationalLogic.count(SCbits, false,CountMode.SATURATING);
-        PAPHT.put(bits, result);
+        PSPHT.put(bits, result);
         BHR.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
     }
 
