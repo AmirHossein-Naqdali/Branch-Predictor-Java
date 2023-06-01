@@ -25,13 +25,13 @@ public class PAg implements BranchPredictor {
     public PAg(int BHRSize, int SCSize, int branchInstructionSize) {
         // TODO: complete the constructor
         // Initialize the PABHR with the given bhr and branch instruction size
-        PABHR = null;
+        this.PABHR = new RegisterBank(BHRSize, branchInstructionSize);
 
         // Initialize the PHT with a size of 2^size and each entry having a saturating counter of size "SCSize"
-        PHT = new PageHistoryTable((int)Math.pow(2,BHRSize), SCSize);
+        this.PHT = new PageHistoryTable((int)Math.pow(2,BHRSize), SCSize);
 
         // Initialize the SC register
-        SC = new SIPORegister("SC", SCSize, null);
+        this.SC = new SIPORegister("SC", SCSize, null);
     }
 
     /**
@@ -41,7 +41,12 @@ public class PAg implements BranchPredictor {
     @Override
     public BranchResult predict(BranchInstruction instruction) {
         // TODO: complete Task 1
-        return BranchResult.NOT_TAKEN;
+        ShiftRegister PHTAddress = this.PABHR.read(instruction.getOpcode());
+        PHT.putIfAbsent(PHTAddress.read(), getDefaultBlock());
+        Bit[] SCBits = PHT.get(PHTAddress.read());
+        Bit msb = SCBits[0];
+        if(msb==Bit.ZERO) return BranchResult.NOT_TAKEN;
+        else return BranchResult.TAKEN;
     }
 
     /**
@@ -50,7 +55,16 @@ public class PAg implements BranchPredictor {
      */
     @Override
     public void update(BranchInstruction instruction, BranchResult actual) {
-        // TODO: complete Task 2
+        ShiftRegister PHTAddress = this.PABHR.read(instruction.getOpcode());
+        Bit[] SCBits = PHT.get(PHTAddress.read());
+        Bit[] result;
+        if(actual == BranchResult.TAKEN)
+            result = CombinationalLogic.count(SCBits, true,CountMode.SATURATING);
+        else
+            result = CombinationalLogic.count(SCBits, false,CountMode.SATURATING);
+        PHT.put(PHTAddress.read(), result);
+        PHTAddress.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
+//        PABHR.write(instruction.getOpcode(), );
     }
 
     /**
