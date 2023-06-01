@@ -1,28 +1,92 @@
-# GAg Predictor
+package hardwar.branch.prediction.judged.GAg;
 
-## How to implement a GAg
+import hardwar.branch.prediction.shared.*;
+import hardwar.branch.prediction.shared.devices.*;
 
-1) Use a register as a global branch history
-2) Use a Cache as a predication history table
+import java.util.Arrays;
 
-### Task 1 : Predict
+import javax.naming.spi.DirStateFactory.Result;
 
-predict the branch result based on GAg model
+public class GAg implements BranchPredictor {
+    private final ShiftRegister BHR; // branch history register
+    private final Cache<Bit[], Bit[]> PHT; // page history table
+    private final ShiftRegister SC; // saturated counter register
 
-HINT : 
-1) read from BHR register
-2) read the associated block with the BHR value
-3) load the read block from the cache into the SC register
-4) return the MSB of the read block or SC register
+    public GAg() {
+        this(4, 2);
+    }
 
-### Task 2 : Update
+    /**
+     * Creates a new GAg predictor with the given BHR register size and initializes the BHR and PHT.
+     *
+     * @param BHRSize the size of the BHR register
+     * @param SCSize  the size of the register which hold the saturating counter value and the cache block size
+     */
+    public GAg(int BHRSize, int SCSize) {
+        // TODO : complete the constructor
+        // Initialize the BHR register with the given size and no default value
+        this.BHR = new SIPORegister("BHR", BHRSize,Bit.ZERO) ;
 
-update the predictor state based on the actual result
+        // Initialize the PHT with a size of 2^size and each entry having a saturating counter of size "SCSize"
+        PHT = new PageHistoryTab(Math.pow(2,BHRSize), SCSize);
 
-HINT : 
-1) pass the SC register bits to a saturating counter
-2) save the updated value into the cache via BHR
-3) update the BHR with the actual branch result
+        // Initialize the SC register
+        SC = new SIPORegister("SC", SCSize, Bit.ZERO);
+    }
 
-<img src="../../../../../../resources/GAg/GAg.jpg">
+    /**
+     * Predicts the result of a branch instruction based on the global branch history
+     *
+     * @param branchInstruction the branch instruction
+     * @return the predicted outcome of the branch instruction (taken or not taken)
+     */
+    @Override
+    public BranchResult predict(BranchInstruction branchInstruction) {
+        // TODO : complete Task 1
+        Bit[] bits = this.BHR.read();
+        PHT.putIfAbsent(bits, getDefaultBlock());
+        Bit[] SCbits = PHT.get(bits);
+        Bit msb = SCbits[0];
+        if(msb==Bit.ZERO)
+            return BranchResult.NOT_TAKEN;
+        else
+            return BranchResult.TAKEN;
+        
+    }
 
+    /**
+     * Updates the values in the cache based on the actual branch result
+     *
+     * @param instruction the branch instruction
+     * @param actual      the actual result of the branch condition
+     */
+    @Override
+    public void update(BranchInstruction instruction, BranchResult actual) {
+        // TODO: complete Task 2
+        Bit[] bhrBits = this.BHR.read();
+        Bit[] SCbits = PHT.get(bhrBits);
+        Bit[] result;
+        if(actual == BranchResult.TAKEN)
+            result = CombinationalLogic.count(SCbits, true,CountMode.SATURATING);
+        else
+            result = CombinationalLogic.count(SCbits, false,CountMode.SATURATING);
+        PHT.put(bhrBits, result);
+        BHR.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
+
+    }
+
+
+    /**
+     * @return a zero series of bits as default value of cache block
+     */
+    private Bit[] getDefaultBlock() {
+        Bit[] defaultBlock = new Bit[SC.getLength()];
+        Arrays.fill(defaultBlock, Bit.ZERO);
+        return defaultBlock;
+    }
+
+    @Override
+    public String monitor() {
+        return "GAg predictor snapshot: \n" + BHR.monitor() + SC.monitor() + PHT.monitor();
+    }
+}
