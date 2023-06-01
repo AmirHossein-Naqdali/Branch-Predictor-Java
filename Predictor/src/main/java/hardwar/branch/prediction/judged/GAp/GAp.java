@@ -35,7 +35,7 @@ public class GAp implements BranchPredictor {
         PAPHT = new PerAddressPredictionHistoryTable(branchInstructionSize, (int)Math.pow(2,BHRSize), SCSize);
 
         // Initialize the SC register
-        SC = null;
+        SC = new SIPORegister("SC", SCSize, null);
     }
 
     /**
