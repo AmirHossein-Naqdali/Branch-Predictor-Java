@@ -1,5 +1,5 @@
 package hardwar.branch.prediction.judged.GAg;
-
+import java.lang.Math;
 import hardwar.branch.prediction.shared.*;
 import hardwar.branch.prediction.shared.devices.*;
 
@@ -25,13 +25,13 @@ public class GAg implements BranchPredictor {
     public GAg(int BHRSize, int SCSize) {
         // TODO : complete the constructor
         // Initialize the BHR register with the given size and no default value
-        this.BHR = new SIPORegister("BHR", BHRSize,Bit.ZERO) ;
+        this.BHR = new SIPORegister("BHR", BHRSize,null) ;
 
         // Initialize the PHT with a size of 2^size and each entry having a saturating counter of size "SCSize"
         PHT = new PageHistoryTab(Math.pow(2,BHRSize), SCSize);
 
         // Initialize the SC register
-        SC = new SIPORegister("SC", SCSize, Bit.ZERO);
+        SC = new SIPORegister("SC", SCSize, null);
     }
 
     /**
