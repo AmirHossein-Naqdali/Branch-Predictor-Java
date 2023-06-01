@@ -29,20 +29,22 @@ public class GAs implements BranchPredictor {
      */
     public GAs(int BHRSize, int SCSize, int branchInstructionSize, int KSize, HashMode hashmode) {
         // TODO: complete the constructor
-        this.branchInstructionSize = 0;
-        this.KSize = 0;
+        this.branchInstructionSize = branchInstructionSize;
+        this.KSize =KSize;
         this.hashMode = HashMode.XOR;
 
         // Initialize the BHR register with the given size and no default value
-        BHR = null;
+        this.BHR = new SIPORegister("BHR", BHRSize,null) ;
 
-        // Initializing the PAPHT with K bit as PHT selector and 2^BHRSize row as each PHT entries
+        // Initializing the PAPHT with BranchInstructionSize as PHT Selector and 2^BHRSize row as each PHT entries
         // number and SCSize as block size
-        PSPHT = null;
+        PAPHT = new PerAddressPredictionHistoryTable(KSize, (int)Math.pow(2,BHRSize), SCSize);
 
-        // Initialize the saturating counter
-        SC = null;
+        // Initialize the SC register
+        SC = new SIPORegister("SC", SCSize, null);
     }
+
+
 
     /**
      * predicts the result of a branch instruction based on the global branch history and hash value of
@@ -54,8 +56,17 @@ public class GAs implements BranchPredictor {
     @Override
     public BranchResult predict(BranchInstruction branchInstruction) {
         // TODO: complete Task 1
-        return BranchResult.NOT_TAKEN;
+        Bit[] branchAddress = branchInstruction.getInstructionAddress();
+        Bit[] bits = getCacheEntry(branchAddress);
+        PAPHT.putIfAbsent(bits, getDefaultBlock());
+        Bit[] SCbits = PAPHT.get(bits);
+        Bit msb = SCbits[0];
+        if(msb==Bit.ZERO)
+            return BranchResult.NOT_TAKEN;
+        else
+            return BranchResult.TAKEN;
     }
+    
 
     /**
      * Updates the value in the cache based on actual branch result
@@ -65,7 +76,16 @@ public class GAs implements BranchPredictor {
      */
     @Override
     public void update(BranchInstruction branchInstruction, BranchResult actual) {
-        // TODO: complete Task 2
+        Bit[]branchAddress = branchInstruction.getInstructionAddress();
+        Bit[] bits = getCacheEntry(branchAddress);
+        Bit[] SCbits = PAPHT.get(bits);
+        Bit[] result;
+        if(actual == BranchResult.TAKEN)
+            result = CombinationalLogic.count(SCbits, true,CountMode.SATURATING);
+        else
+            result = CombinationalLogic.count(SCbits, false,CountMode.SATURATING);
+        PAPHT.put(bits, result);
+        BHR.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
     }
 
     /**
