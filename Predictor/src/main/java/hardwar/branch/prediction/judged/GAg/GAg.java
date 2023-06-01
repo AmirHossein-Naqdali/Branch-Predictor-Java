@@ -5,6 +5,8 @@ import hardwar.branch.prediction.shared.devices.*;
 
 import java.util.Arrays;
 
+import javax.naming.spi.DirStateFactory.Result;
+
 public class GAg implements BranchPredictor {
     private final ShiftRegister BHR; // branch history register
     private final Cache<Bit[], Bit[]> PHT; // page history table
@@ -23,13 +25,13 @@ public class GAg implements BranchPredictor {
     public GAg(int BHRSize, int SCSize) {
         // TODO : complete the constructor
         // Initialize the BHR register with the given size and no default value
-        this.BHR = null;
+        this.BHR = new SIPORegister(BHR, BHRSize,Bit.ZERO) ;
 
         // Initialize the PHT with a size of 2^size and each entry having a saturating counter of size "SCSize"
-        PHT = null;
+        PHT = new PageHistoryTab(Math.pow(2,BHRSize), SCSize);
 
         // Initialize the SC register
-        SC = null;
+        SC = new SIPORegister(SC, SCSize, Bit.ZERO);
     }
 
     /**
@@ -41,7 +43,15 @@ public class GAg implements BranchPredictor {
     @Override
     public BranchResult predict(BranchInstruction branchInstruction) {
         // TODO : complete Task 1
-        return BranchResult.NOT_TAKEN;
+        Bit[] bits = this.BHR.read();
+        PHT.putIfAbsent(bits, getDefaultBlock());
+        Bit[] SCbits = PHT.get(bits);
+        Bit msb = SCbits[0];
+        if(msb==Bit.ZERO)
+            return BranchResult.NOT_TAKEN;
+        else
+            return BranchResult.TAKEN;
+        
     }
 
     /**
@@ -53,6 +63,16 @@ public class GAg implements BranchPredictor {
     @Override
     public void update(BranchInstruction instruction, BranchResult actual) {
         // TODO: complete Task 2
+        Bit[] bhrBits = this.BHR.read();
+        Bit[] SCbits = PHT.get(bhrBits);
+        Bit[] result;
+        if(actual == BranchResult.TAKEN)
+            result = CombinationalLogic.count(SCbits, true,CountMode.SATURATING);
+        else
+            result = CombinationalLogic.count(SCbits, false,CountMode.SATURATING);
+        PHT.put(bhrBits, result);
+        BHR.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
+
     }
 
 
