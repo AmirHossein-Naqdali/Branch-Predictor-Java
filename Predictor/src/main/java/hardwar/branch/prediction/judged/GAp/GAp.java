@@ -47,7 +47,7 @@ public class GAp implements BranchPredictor {
     @Override
     public BranchResult predict(BranchInstruction branchInstruction) {
         // TODO: complete Task 1
-        branchAddress = branchInstruction.getInstructionAddress();
+        Bit[] branchAddress = branchInstruction.getInstructionAddress();
         Bit[] bits = getCacheEntry(branchInstruction);
         PAPHT.putIfAbsent(bits, getDefaultBlock());
         Bit[] SCbits = PAPHT.get(bits);
@@ -66,7 +66,7 @@ public class GAp implements BranchPredictor {
      */
     @Override
     public void update(BranchInstruction branchInstruction, BranchResult actual) {
-        branchAddress = branchInstruction.getInstructionAddress();
+        Vit[]branchAddress = branchInstruction.getInstructionAddress();
         Bit[] bits = getCacheEntry(branchInstruction);
         Bit[] SCbits = PAPHT.get(bits);
         Bit[] result;
