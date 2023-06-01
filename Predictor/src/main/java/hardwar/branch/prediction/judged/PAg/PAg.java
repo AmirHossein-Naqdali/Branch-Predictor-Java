@@ -63,8 +63,14 @@ public class PAg implements BranchPredictor {
         else
             result = CombinationalLogic.count(SCBits, false,CountMode.SATURATING);
         PHT.put(PHTAddress.read(), result);
-        PHTAddress.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
-//        PABHR.write(instruction.getOpcode(), );
+        Bit[] newBits = PHTAddress.read();
+        for (int i = newBits.length - 1; i > 0; i--)
+            newBits[i] = newBits[i - 1];
+
+        // Insert the new bit at the beginning of the register
+        newBits[0] = actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO;
+//        PHTAddress.insert(actual == BranchResult.TAKEN ? Bit.ONE : Bit.ZERO);
+        PABHR.write(instruction.getOpcode(), newBits);
     }
 
     /**
